@@ -310,3 +310,169 @@ public class Tuile {
 
 }
 
+
+
+
+
+
+
+
+
+Tuile : 
+
+
+
+
+
+import java.util.Random; // Utile pour la génération aléatoire future
+
+
+
+
+
+public class Jeu {
+
+
+
+&nbsp;   // --- 1. ATTRIBUTS ---
+
+&nbsp;   private Tuile\[]\[] grille; // Le tableau 2D qui stocke tous les objets Tuile
+
+&nbsp;   private int lignes;
+
+&nbsp;   private int colonnes;
+
+&nbsp;   
+
+&nbsp;   // Un attribut pour le décompte des coups si tu veux l'afficher
+
+&nbsp;   private int nombreDeCoups = 0; 
+
+&nbsp;   
+
+&nbsp;   // --- 2. CONSTRUCTEUR ---
+
+&nbsp;   public Plateau(int lignes, int colonnes) {
+
+&nbsp;       this.lignes = lignes;
+
+&nbsp;       this.colonnes = colonnes;
+
+&nbsp;       this.grille = new Tuile\[lignes]\[colonnes];
+
+&nbsp;       
+
+&nbsp;   }
+
+&nbsp;   
+
+
+
+&nbsp;   @Override
+
+&nbsp;   public String toString() {
+
+&nbsp;       StringBuilder sb = new StringBuilder();
+
+&nbsp;       
+
+&nbsp;       sb.append("Plateau NetWalk (").append(lignes).append("x").append(colonnes).append(") | Coups: ").append(nombreDeCoups).append("\\n");
+
+&nbsp;       
+
+&nbsp;       for (int i = 0; i < lignes; i++) {
+
+&nbsp;           for (int j = 0; j < colonnes; j++) {
+
+&nbsp;               // Ici, on demande à chaque tuile de renvoyer son caractère (ex: '┼', '└', etc.)
+
+&nbsp;               // On utilise un espace pour séparer les tuiles
+
+&nbsp;               sb.append(grille\[i]\[j].toConsoleChar()).append(" "); 
+
+&nbsp;           }
+
+&nbsp;           sb.append("\\n"); // Nouvelle ligne après chaque ligne de la grille
+
+&nbsp;       }
+
+&nbsp;       return sb.toString();
+
+&nbsp;   }
+
+
+
+&nbsp;   public void faireTournerTuile(int x, int y) {
+
+&nbsp;       if (x >= 0 \&\& x < lignes \&\& y >= 0 \&\& y < colonnes) {
+
+&nbsp;           grille\[x]\[y].fairePivoter();
+
+&nbsp;           this.nombreDeCoups++;
+
+&nbsp;       } else {
+
+&nbsp;           System.err.println("Coordonnées de tuile invalides.");
+
+&nbsp;       }
+
+&nbsp;   }
+
+
+
+
+
+&nbsp;   private int directionOpposee(int dir) {
+
+&nbsp;       // Dans le masque 1-2-4-8 (rotation horaire) :
+
+&nbsp;       // N(1) opposé à S(4), E(2) opposé à O(8).
+
+&nbsp;       if (dir == Tuile.NORD) return Tuile.SUD;
+
+&nbsp;       if (dir == Tuile.EST) return Tuile.OUEST;
+
+&nbsp;       if (dir == Tuile.SUD) return Tuile.NORD;
+
+&nbsp;       if (dir == Tuile.OUEST) return Tuile.EST;
+
+&nbsp;       return 0; // Erreur
+
+&nbsp;   }
+
+
+
+&nbsp;   /\*\*
+
+&nbsp;    \* Vérifie si la connexion entre les deux tuiles adjacentes (x1, y1) et (x2, y2) est valide.
+
+&nbsp;    \*/
+
+&nbsp;   public boolean verifierLien(int x1, int y1, int x2, int y2) {
+
+&nbsp;       // ... (Tuile a) est toujours (x1, y1), (Tuile b) est toujours (x2, y2)
+
+
+
+&nbsp;       if (x1 == x2 \&\& y1 == y2 + 1) { // Tuile A est à l'EST de Tuile B
+
+&nbsp;           // A doit avoir une connexion à l'OUEST, B doit avoir une connexion à l'EST.
+
+&nbsp;           return grille\[x1]\[y1].aConnexion(Tuile.OUEST) \&\& grille\[x2]\[y2].aConnexion(Tuile.EST);
+
+&nbsp;       } 
+
+&nbsp;       // ... Il faut ajouter les 3 autres cas (Nord, Sud, Ouest)
+
+&nbsp;       
+
+&nbsp;       return false;
+
+&nbsp;   }
+
+}
+
+
+
+
+
