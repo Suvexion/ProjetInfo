@@ -1,141 +1,74 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package netwalk;
 
-/**
- *
- * @author thua
- */
 public class Tuile {
 
-    
+    public enum Type { SOURCE, TERMINAL, TUYAU }
 
-    // --- 1. ATTRIBUTS ---
     private int codeCase;
-    private Type type; // Utilisation de l'enum
-    private boolean estConnectee = false;
+    private Type type;
+    private boolean estConnectee;
 
-    // --- ENUMÉRATION DU TYPE ---
-    public enum Type {
-        SOURCE,
-        TERMINAL,
-        TUYAU
-    }
-    // --- 2. CONSTANTES BINAIRES (Masque 8-4-2-1 / Anti-horaire) ---
-    // NORD : Bit de poids fort (MSB) -> 8
-    public static final int NORD  = 8;  // 1000
-    public static final int EST   = 4;  // 0100
-    public static final int SUD   = 2;  // 0010
-    public static final int OUEST = 1;  // 0001
-    
-    // --- 3. CONSTRUCTEUR ---
-    public Tuile(int connexionsInitiales, Type type, boolean estConnectee) { // Typage de l'enum
-        this.codeCase = connexionsInitiales;
+    public static final int NORD  = 8; 
+    public static final int EST   = 4; 
+    public static final int SUD   = 2; 
+    public static final int OUEST = 1; 
+
+    public Tuile(int code, Type type, boolean connectee) {
+        this.codeCase = code;
         this.type = type;
-        this.estConnectee = estConnectee;
+        this.estConnectee = connectee;
     }
-    
-    // --- 4. MÉTHODE DE ROTATION (Anti Horaire) ---
+
+    // Ajoute une connexion (utile pour le générateur)
+    public void ajouterConnexion(int dir) {
+        this.codeCase |= dir;
+    }
+
     public void fairePivoter() {
         if (this.type == Type.SOURCE) return;
-    
-    // Si la tuile est ouverte au Nord (8), la rotation la mène à 16.
-    this.codeCase = this.codeCase * 2;
-    
-    // Si dépassement (16 ou plus), on enlève le 16 et on ramène le bit perdu à la position OUEST (1).
-    if (this.codeCase > 15) {
-        // Le 16 n'existe pas en 4 bits, il doit réintégrer le bas (Ouest=1).
-        this.codeCase = (this.codeCase % 16) + 1; // Ex: 16%16 = 0, +1 = 1.
+        this.codeCase = this.codeCase * 2;
+        if (this.codeCase > 15) this.codeCase = (this.codeCase % 16) + 1;
     }
-    }
-    
-    
-    // --- 6. GETTERS/SETTERS ---
-    public Type getType() { return type; }
-    public int getConnexions() { return codeCase; } // Ajout du getter manquant pour les tests
-    public void setConnectee(boolean etat) { this.estConnectee = etat; }
-    public boolean getEstConnectee() { return estConnectee; }
 
-    
+    public boolean aConnexion(int dir) {
+        return (this.codeCase & dir) != 0;
+    }
+
+    // Getters / Setters
+    public Type getType() { return type; }
+    public void setType(Type t) { this.type = t; }
+    public int getConnexions() { return codeCase; }
+    public boolean getEstConnectee() { return estConnectee; }
+    public void setConnectee(boolean b) { this.estConnectee = b; }
+
     @Override
     public String toString() {
- 
-    
-    //Tuile vide
-    if (this.codeCase==0){
-        return "";
+        if (codeCase == 0) return " ";
+        // Cas simples (Bouts)
+        if (codeCase == NORD) return "\u2575";
+        if (codeCase == SUD) return "\u2577";
+        if (codeCase == EST) return "\u2576";
+        if (codeCase == OUEST) return "\u2574";
+        
+        // Lignes
+        if (codeCase == (NORD|SUD)) return "\u2502";
+        if (codeCase == (EST|OUEST)) return "\u2500";
 
+        // Coudes
+        if (codeCase == (NORD|EST)) return "\u2514";
+        if (codeCase == (EST|SUD)) return "\u250C";
+        if (codeCase == (SUD|OUEST)) return "\u2510";
+        if (codeCase == (OUEST|NORD)) return "\u2518";
+
+        // T
+        if (codeCase == (NORD|EST|SUD)) return "\u2524";
+        if (codeCase == (EST|SUD|OUEST)) return "\u252C"; // T vers bas (car Ouest+Est+Sud)
+        if (codeCase == (SUD|OUEST|NORD)) return "\u251C";
+        if (codeCase == (OUEST|NORD|EST)) return "\u2534"; // T vers haut
+
+        // Croix
+        if (codeCase == 15) return "\u253C";
+
+        return "?";
     }
-
-
-    //Ligne simple
-    if (this.codeCase==10){ //Verticale
-        return "\u2502";
-
-    }
-
-    if (this.codeCase==5){ //Horizontale
-        return "\u2500";
-
-    }
-
-    //Coude 
-
-    if (this.codeCase==12){ //L
-        return "\u2514";
-
-    }
-    
-    if (this.codeCase==6){ //r
-        return "\u250C";
-
-    }
-
-    if (this.codeCase==3){ //7
-        return "\u2510";
-
-    }
-    
-    if (this.codeCase==3){ //J
-        return "\u2518";
-
-    }
-
-    //Jonctions en T
-
-    if (this.codeCase==14){ //Manque ouest
-        return "\u2524";
-
-    }
-
-    if (this.codeCase==7){ //Manque nord
-        return "\u2534";
-
-    }
-
-    if (this.codeCase==11){ //Manque est
-        return "\u251C";
-
-    }
-
-    if (this.codeCase==13){ //Manque sud
-        return "\u252C";
-
-    }
-
-    //Jonction en croix 
-
-    if (this.codeCase==15){ //croix
-        return "\u253C";
-
-    } 
-
-    else {
-        return "X";
-
-    }
-
-}
 }
