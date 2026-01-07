@@ -1,200 +1,246 @@
 package netwalk;
 
 import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Line2D;
 import javax.swing.*;
 
 public class InterfaceGraphique extends JFrame {
-
     private Jeu jeu;
-    private JButton[][] boutons;
-    private JLabel labelInfo;
-    private JPanel panneauPrincipal;
-    
-    // Sauvegarde des paramètres actuels pour le bouton "Recommencer"
-    private int tailleActuelle = 5; 
+    private JPanel grillePanel;
+    private JLabel labelTemps;
+    private JLabel labelCoups;
+    private Timer timer;
+    private long tempsDebut;
+    private boolean partieFinie = false;
+
+    // Configuration des couleurs (Style "Dark Mode" ou "Retro")
+    private final Color COLOR_BG = new Color(40, 40, 40);       // Gris foncé
+    private final Color COLOR_PIPE_OFF = new Color(100, 100, 100); // Gris (éteint)
+    private final Color COLOR_PIPE_ON = new Color(0, 200, 255);    // Cyan (allumé)
+    private final Color COLOR_SOURCE = new Color(255, 69, 0);      // Orange/Rouge
+    private final Color COLOR_TERMINAL_OFF = new Color(128, 0, 128); // Violet
+    private final Color COLOR_TERMINAL_ON = new Color(50, 205, 50);  // Vert
 
     public InterfaceGraphique() {
-        this.setTitle("NetWalk - Projet Info");
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setSize(900, 700);
+        setTitle("NetWalk - Projet Java");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        setLocationRelativeTo(null); // Centrer la fenêtre
+        setLayout(new BorderLayout());
+
+        // 1. Initialisation du jeu
+        lancerNouveauJeu();
+
+        // 2. Panneau du Haut (Infos)
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 10));
+        topPanel.setBackground(new Color(30, 30, 30));
         
-        // On démarre sur le Menu de sélection
-        afficherMenu();
+        labelCoups = new JLabel("Coups: 0");
+        labelCoups.setForeground(Color.WHITE);
+        labelCoups.setFont(new Font("Arial", Font.BOLD, 18));
         
-        this.setVisible(true);
+        labelTemps = new JLabel("Temps: 00:00");
+        labelTemps.setForeground(Color.WHITE);
+        labelTemps.setFont(new Font("Monospaced", Font.BOLD, 18));
+
+        topPanel.add(labelCoups);
+        topPanel.add(labelTemps);
+        add(topPanel, BorderLayout.NORTH);
+
+        // 3. Panneau Central (Grille de Jeu)
+        grillePanel = new JPanel();
+        grillePanel.setBackground(COLOR_BG);
+        add(grillePanel, BorderLayout.CENTER);
+
+        // 4. Panneau du Bas (Boutons)
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setBackground(new Color(30, 30, 30));
+        
+        JButton btnRestart = new JButton("Recommencer");
+        btnRestart.setFocusable(false);
+        btnRestart.addActionListener(e -> lancerNouveauJeu());
+        
+        bottomPanel.add(btnRestart);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        // 5. Timer pour le chronomètre (1 seconde)
+        timer = new Timer(1000, e -> mettreAJourChrono());
+        timer.start();
+
+        // Premier dessin
+        dessinerGrille();
+        setVisible(true);
     }
 
-    /**
-     * Affiche l'écran de sélection de difficulté.
-     */
-    private void afficherMenu() {
-        // Nettoyage de la fenêtre
-        this.getContentPane().removeAll();
-        this.setLayout(new GridBagLayout()); // Centrage des éléments
+    private void lancerNouveauJeu() {
+        // Création d'un jeu 5x7 (ou autre taille)
+        this.jeu = new Jeu(5, 7, System.currentTimeMillis());
+        this.tempsDebut = System.currentTimeMillis();
+        this.partieFinie = false;
         
-        JPanel menuPanel = new JPanel();
-        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
-        menuPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        JLabel titre = new JLabel("Bienvenue dans NetWalk");
-        titre.setFont(new Font("Arial", Font.BOLD, 30));
-        titre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        if (timer != null) timer.restart();
+        if (labelCoups != null) labelCoups.setText("Coups: 0");
         
-        JLabel sousTitre = new JLabel("Choisissez votre niveau :");
-        sousTitre.setFont(new Font("Arial", Font.PLAIN, 18));
-        sousTitre.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Boutons de niveaux
-        JButton btnDebutant = creerBoutonNiveau("Débutant (5x5)", 5);
-        JButton btnInter = creerBoutonNiveau("Intermédiaire (10x10)", 10);
-        JButton btnExpert = creerBoutonNiveau("Expert (15x15)", 15); // 20x20 peut être très petit sur l'écran
-
-        menuPanel.add(titre);
-        menuPanel.add(Box.createRigidArea(new Dimension(0, 20)));
-        menuPanel.add(sousTitre);
-        menuPanel.add(Box.createRigidArea(new Dimension(0, 20)));
-        menuPanel.add(btnDebutant);
-        menuPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        menuPanel.add(btnInter);
-        menuPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        menuPanel.add(btnExpert);
-
-        this.add(menuPanel);
-        this.revalidate();
-        this.repaint();
+        dessinerGrille();
     }
 
-    private JButton creerBoutonNiveau(String texte, int taille) {
-        JButton btn = new JButton(texte);
-        btn.setFont(new Font("Arial", Font.BOLD, 16));
-        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btn.addActionListener(e -> lancerPartie(taille));
-        return btn;
+    private void mettreAJourChrono() {
+        if (partieFinie) return;
+        long millis = System.currentTimeMillis() - tempsDebut;
+        long secondes = millis / 1000;
+        long min = secondes / 60;
+        long sec = secondes % 60;
+        labelTemps.setText(String.format("Temps: %02d:%02d", min, sec));
     }
 
-    /**
-     * Lance une nouvelle partie avec la taille donnée.
-     */
-    private void lancerPartie(int taille) {
-        this.tailleActuelle = taille;
-        this.jeu = new Jeu(taille, taille); // Génération du niveau parfait + mélange
+    // --- CŒUR DU DESSIN ---
+    private void dessinerGrille() {
+        if (grillePanel == null) return;
         
-        // Nettoyage de la fenêtre pour afficher le jeu
-        this.getContentPane().removeAll();
-        this.setLayout(new BorderLayout());
+        grillePanel.removeAll();
+        int rows = jeu.getLignes();
+        int cols = jeu.getColonnes();
+        grillePanel.setLayout(new GridLayout(rows, cols));
 
-        // 1. HEADER (Haut) : Score et bouton Retour Menu
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        
-        JButton btnMenu = new JButton("Menu");
-        btnMenu.addActionListener(e -> afficherMenu());
-        
-        labelInfo = new JLabel("Coups : 0");
-        labelInfo.setFont(new Font("SansSerif", Font.BOLD, 20));
-        labelInfo.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        headerPanel.add(btnMenu, BorderLayout.WEST);
-        headerPanel.add(labelInfo, BorderLayout.CENTER);
-        this.add(headerPanel, BorderLayout.NORTH);
-
-        // 2. GRILLE (Centre)
-        panneauPrincipal = new JPanel();
-        panneauPrincipal.setLayout(new GridLayout(taille, taille));
-        
-        boutons = new JButton[taille][taille];
-        
-        // Calcul de la taille de police dynamique selon la taille de la grille
-        int fontSize = (taille > 10) ? 20 : 40; 
-        Font fontTuile = new Font("Monospaced", Font.BOLD, fontSize);
-
-        for (int i = 0; i < taille; i++) {
-            for (int j = 0; j < taille; j++) {
-                JButton btn = new JButton();
-                btn.setFont(fontTuile);
-                btn.setFocusPainted(false);
-                
-                final int r = i;
-                final int c = j;
-                btn.addActionListener(e -> jouerCoup(r, c));
-
-                boutons[i][j] = btn;
-                panneauPrincipal.add(btn);
-            }
-        }
-        this.add(panneauPrincipal, BorderLayout.CENTER);
-
-        // 3. FOOTER (Bas) : Légende et Reset
-        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
-        footerPanel.setBackground(Color.LIGHT_GRAY);
-
-        // Bouton Reset
-        JButton btnReset = new JButton("Recommencer ce niveau");
-        btnReset.addActionListener(e -> lancerPartie(tailleActuelle)); // Relance le même niveau (nouvelle génération)
-        
-        // Légende
-        footerPanel.add(creerLabelLegende("Source", Color.ORANGE));
-        footerPanel.add(creerLabelLegende("Connecté", Color.CYAN));
-        footerPanel.add(creerLabelLegende("Déconnecté", Color.LIGHT_GRAY));
-        footerPanel.add(creerLabelLegende("Terminal (OFF)", Color.PINK));
-        footerPanel.add(creerLabelLegende("Terminal (ON)", Color.GREEN));
-        footerPanel.add(btnReset);
-
-        this.add(footerPanel, BorderLayout.SOUTH);
-
-        rafraichirVue();
-        this.revalidate();
-        this.repaint();
-    }
-
-    private JLabel creerLabelLegende(String texte, Color couleur) {
-        JLabel lbl = new JLabel("  " + texte + "  ");
-        lbl.setOpaque(true);
-        lbl.setBackground(couleur);
-        lbl.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        return lbl;
-    }
-
-    private void jouerCoup(int r, int c) {
-        jeu.faireTournerTuile(r, c);
-        rafraichirVue();
-        
-        if (jeu.partieTerminee()) {
-            labelInfo.setText("VICTOIRE ! (" + jeu.getNombreDeCoups() + " coups)");
-            labelInfo.setForeground(new Color(0, 128, 0));
-            int choix = JOptionPane.showConfirmDialog(this, 
-                "Félicitations ! Vous avez rétabli le réseau !\nVoulez-vous rejouer ?", 
-                "Victoire", JOptionPane.YES_NO_OPTION);
-                
-            if (choix == JOptionPane.YES_OPTION) {
-                afficherMenu();
-            }
-        }
-    }
-
-    private void rafraichirVue() {
-        labelInfo.setText("Coups : " + jeu.getNombreDeCoups());
         Tuile[][] grille = jeu.getGrille();
 
-        for (int i = 0; i < jeu.getLignes(); i++) {
-            for (int j = 0; j < jeu.getColonnes(); j++) {
-                Tuile t = grille[i][j];
-                JButton btn = boutons[i][j];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                final int r = i;
+                final int c = j;
+                
+                // On crée un composant personnalisé pour chaque tuile
+                PanneauTuile pTuile = new PanneauTuile(grille[i][j]);
+                
+                // GESTION DES CLICS SOURIS
+                pTuile.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        if (partieFinie) return;
 
-                btn.setText(t.toString());
+                        if (SwingUtilities.isRightMouseButton(e)) {
+                            // Clic Droit -> Rotation horaire (normale)
+                            jeu.faireTournerTuile(r, c);
+                        } else if (SwingUtilities.isLeftMouseButton(e)) {
+                            // Clic Gauche -> Rotation anti-horaire
+                            // (Astuce : 3 rotations à droite = 1 à gauche)
+                            jeu.faireTournerTuile(r, c);
+                            jeu.faireTournerTuile(r, c);
+                            jeu.faireTournerTuile(r, c); 
+                            // Note: Le compteur de coups augmentera de 3, 
+                            // si tu veux éviter ça, il faudrait une méthode "tournerGauche" dans Jeu.
+                        }
+                        
+                        verifierVictoire();
+                        labelCoups.setText("Coups: " + jeu.getNombreDeCoups());
+                        
+                        // On redessine tout (bourrin mais sûr pour les connexions)
+                        grillePanel.revalidate();
+                        grillePanel.repaint();
+                    }
+                });
+                
+                grillePanel.add(pTuile);
+            }
+        }
+        grillePanel.revalidate();
+        grillePanel.repaint();
+    }
 
-                if (t.getType() == Tuile.Type.SOURCE) {
-                    btn.setBackground(Color.ORANGE);
-                } else if (t.getType() == Tuile.Type.TERMINAL) {
-                    btn.setBackground(t.getEstConnectee() ? Color.GREEN : Color.PINK);
-                } else {
-                    btn.setBackground(t.getEstConnectee() ? Color.CYAN : Color.LIGHT_GRAY);
-                }
+    private void verifierVictoire() {
+        if (jeu.partieTerminee()) {
+            partieFinie = true;
+            timer.stop();
+            grillePanel.repaint(); // Pour afficher les dernières couleurs
+            
+            long secondes = (System.currentTimeMillis() - tempsDebut) / 1000;
+            JOptionPane.showMessageDialog(this, 
+                "FÉLICITATIONS !\n\n" +
+                "Niveau terminé.\n" +
+                "Coups : " + jeu.getNombreDeCoups() + "\n" +
+                "Temps : " + secondes + "s",
+                "Victoire", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    // --- COMPOSANT VISUEL D'UNE TUILE ---
+    // C'est ici qu'on dessine les lignes, les carrés, etc.
+    private class PanneauTuile extends JPanel {
+        private Tuile tuile;
+
+        public PanneauTuile(Tuile t) {
+            this.tuile = t;
+            this.setBackground(COLOR_BG);
+            this.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60), 1)); // Légère bordure
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            
+            // Anti-aliasing pour que ce soit joli (moins pixelisé)
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int cx = w / 2;
+            int cy = h / 2;
+            
+            // Déterminer la couleur
+            Color couleurLigne = tuile.getEstConnectee() ? COLOR_PIPE_ON : COLOR_PIPE_OFF;
+            if (tuile.getType() == Tuile.Type.SOURCE) couleurLigne = COLOR_SOURCE;
+
+            // Épaisseur du tuyau
+            int epaisseur = Math.min(w, h) / 5; 
+            g2.setStroke(new BasicStroke(epaisseur, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND));
+            g2.setColor(couleurLigne);
+
+            // DESSIN DES CONNEXIONS (Tuyaux)
+            int code = tuile.getConnexions(); // Assure-toi que cette méthode existe dans Tuile (sinon getCode())
+            
+            // Nord (8)
+            if ((code & 8) != 0) g2.draw(new Line2D.Float(cx, cy, cx, 0));
+            // Sud (2)
+            if ((code & 2) != 0) g2.draw(new Line2D.Float(cx, cy, cx, h));
+            // Est (4)
+            if ((code & 4) != 0) g2.draw(new Line2D.Float(cx, cy, w, cy));
+            // Ouest (1)
+            if ((code & 1) != 0) g2.draw(new Line2D.Float(cx, cy, 0, cy));
+
+            // DESSIN DU CENTRE (Formes Spécifiques)
+            int tailleCentre = epaisseur * 2;
+            int xCentre = cx - tailleCentre / 2;
+            int yCentre = cy - tailleCentre / 2;
+
+            if (tuile.getType() == Tuile.Type.SOURCE) {
+                // Source : Un carré plein Orange/Rouge
+                g2.setColor(COLOR_SOURCE);
+                g2.fillRect(xCentre, yCentre, tailleCentre, tailleCentre);
+                // Petit contour blanc pour le style
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRect(xCentre, yCentre, tailleCentre, tailleCentre);
+
+            } else if (tuile.getType() == Tuile.Type.TERMINAL) {
+                // Terminal : Un carré avec contour, couleur change selon connexion
+                g2.setColor(tuile.getEstConnectee() ? COLOR_TERMINAL_ON : COLOR_TERMINAL_OFF);
+                g2.fillRect(xCentre, yCentre, tailleCentre, tailleCentre);
+                
+                // Dessin "Écran" (petit rectangle noir dedans)
+                g2.setColor(Color.BLACK);
+                g2.fillRect(xCentre + 4, yCentre + 4, tailleCentre - 8, tailleCentre - 8);
+            } else {
+                // Tuyau normal : un petit rond central pour lisser les jointures
+                g2.setColor(couleurLigne);
+                g2.fillOval(cx - epaisseur/2, cy - epaisseur/2, epaisseur, epaisseur);
             }
         }
     }
-    
+
     public static void main(String[] args) {
-        // Lancement via le thread graphique (EDT) pour éviter les bugs d'affichage
-        SwingUtilities.invokeLater(() -> new InterfaceGraphique());
+        // Lancer l'interface dans le thread graphique
+        SwingUtilities.invokeLater(InterfaceGraphique::new);
     }
 }

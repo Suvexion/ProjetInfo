@@ -10,935 +10,536 @@
 
 TUILE :
 
-
-
-
-
 package netwalk;
 
-
-
 public class Tuile {
-
-
-
-&nbsp;   public enum Type { SOURCE, TERMINAL, TUYAU }
-
-
-
-&nbsp;   private int codeCase;
-
-&nbsp;   private Type type;
-
-&nbsp;   private boolean estConnectee;
-
-
-
-&nbsp;   public static final int NORD  = 8; 
-
-&nbsp;   public static final int EST   = 4; 
-
-&nbsp;   public static final int SUD   = 2; 
-
-&nbsp;   public static final int OUEST = 1; 
-
-
-
-&nbsp;   public Tuile(int code, Type type, boolean connectee) {
-
-&nbsp;       this.codeCase = code;
-
-&nbsp;       this.type = type;
-
-&nbsp;       this.estConnectee = connectee;
-
-&nbsp;   }
-
-
-
-&nbsp;   // Ajoute une connexion (utile pour le générateur)
-
-&nbsp;   public void ajouterConnexion(int dir) {
-
-&nbsp;       this.codeCase |= dir;
-
-&nbsp;   }
-
-
-
-&nbsp;   public void fairePivoter() {
-
-&nbsp;       if (this.type == Type.SOURCE) return;
-
-&nbsp;       this.codeCase = this.codeCase \* 2;
-
-&nbsp;       if (this.codeCase > 15) this.codeCase = (this.codeCase % 16) + 1;
-
-&nbsp;   }
-
-
-
-&nbsp;   public boolean aConnexion(int dir) {
-
-&nbsp;       return (this.codeCase \& dir) != 0;
-
-&nbsp;   }
-
-
-
-&nbsp;   // Getters / Setters
-
-&nbsp;   public Type getType() { return type; }
-
-&nbsp;   public void setType(Type t) { this.type = t; }
-
-&nbsp;   public int getConnexions() { return codeCase; }
-
-&nbsp;   public boolean getEstConnectee() { return estConnectee; }
-
-&nbsp;   public void setConnectee(boolean b) { this.estConnectee = b; }
-
-
-
-&nbsp;   @Override
-
-&nbsp;   public String toString() {
-
-&nbsp;       if (codeCase == 0) return " ";
-
-&nbsp;       // Cas simples (Bouts)
-
-&nbsp;       if (codeCase == NORD) return "\\u2575";
-
-&nbsp;       if (codeCase == SUD) return "\\u2577";
-
-&nbsp;       if (codeCase == EST) return "\\u2576";
-
-&nbsp;       if (codeCase == OUEST) return "\\u2574";
-
-&nbsp;       
-
-&nbsp;       // Lignes
-
-&nbsp;       if (codeCase == (NORD|SUD)) return "\\u2502";
-
-&nbsp;       if (codeCase == (EST|OUEST)) return "\\u2500";
-
-
-
-&nbsp;       // Coudes
-
-&nbsp;       if (codeCase == (NORD|EST)) return "\\u2514";
-
-&nbsp;       if (codeCase == (EST|SUD)) return "\\u250C";
-
-&nbsp;       if (codeCase == (SUD|OUEST)) return "\\u2510";
-
-&nbsp;       if (codeCase == (OUEST|NORD)) return "\\u2518";
-
-
-
-&nbsp;       // T
-
-&nbsp;       if (codeCase == (NORD|EST|SUD)) return "\\u2524";
-
-&nbsp;       if (codeCase == (EST|SUD|OUEST)) return "\\u252C"; // T vers bas (car Ouest+Est+Sud)
-
-&nbsp;       if (codeCase == (SUD|OUEST|NORD)) return "\\u251C";
-
-&nbsp;       if (codeCase == (OUEST|NORD|EST)) return "\\u2534"; // T vers haut
-
-
-
-&nbsp;       // Croix
-
-&nbsp;       if (codeCase == 15) return "\\u253C";
-
-
-
-&nbsp;       return "?";
-
-&nbsp;   }
-
+    // --- CONSTANTES DE DIRECTION (Pour ta classe Jeu) ---
+    public static final int NORD = 8;
+    public static final int EST = 4;
+    public static final int SUD = 2;
+    public static final int OUEST = 1;
+
+    // --- ENUM TYPE (Pour ta classe Jeu) ---
+    public enum Type { SOURCE, TERMINAL, TUYAU }
+
+    // --- COULEURS ---
+    public static final String RESET = "\u001B[0m";
+    public static final String RED = "\u001B[31m";    
+    public static final String CYAN = "\u001B[36m";   
+    public static final String WHITE = "\u001B[37m";  
+    public static final String GREEN = "\u001B[32m";  
+    public static final String PURPLE = "\u001B[35m"; 
+
+    private int code; 
+    private Type type;
+    private boolean estConnectee;
+
+    // Constructeur compatible avec ta classe Jeu
+    public Tuile(int code, Type type, boolean connectee) {
+        this.code = code;
+        this.type = type;
+        this.estConnectee = connectee;
+    }
+
+    // --- MÉTHODES UTILISÉES PAR JEU ---
+    public void ajouterConnexion(int dir) {
+        this.code |= dir; // Ajoute le bit de direction
+    }
+
+    public int getConnexions() {
+        return code;
+    }
+
+    public void fairePivoter() {
+        if (type == Type.SOURCE) return; // La source est fixe
+        // Rotation : N->E, E->S, S->O, O->N
+        int newCode = 0;
+        if ((code & NORD) != 0) newCode += EST; 
+        if ((code & EST) != 0) newCode += SUD; 
+        if ((code & SUD) != 0) newCode += OUEST; 
+        if ((code & OUEST) != 0) newCode += NORD; 
+        this.code = newCode;
+    }
+
+    public boolean aConnexion(int dir) {
+        return (code & dir) != 0;
+    }
+
+    // --- GETTERS / SETTERS ---
+    public Type getType() { return type; }
+    public void setType(Type type) { this.type = type; }
+    public boolean getEstConnectee() { return estConnectee; }
+    public void setConnectee(boolean c) { this.estConnectee = c; }
+    
+
+    // --- AFFICHAGE (Le rendu visuel) ---
+    @Override
+    public String toString() {
+        String c = WHITE;
+        if (type == Type.SOURCE) c = RED;
+        else if (type == Type.TERMINAL) c = estConnectee ? GREEN : PURPLE;
+        else if (estConnectee) c = CYAN;
+
+        String s = switch (code) {
+            case 0 -> " ";
+            case 1 -> "\u2574"; // ╴ Ouest
+            case 2 -> "\u2577"; // ╷ Sud
+            case 3 -> "\u2510"; // ┐ 
+            case 4 -> "\u2576"; // ╶ Est
+            case 5 -> "\u2500"; // ─ 
+            case 6 -> "\u250C"; // ┌ 
+            case 7 -> "\u252C"; // ┬ 
+            case 8 -> "\u2575"; // ╵ Nord
+            case 9 -> "\u2518"; // ┘ 
+            case 10 -> "\u2502"; // │ 
+            case 11 -> "\u2524"; // ┤ 
+            case 12 -> "\u2514"; // └ 
+            case 13 -> "\u2534"; // ┴ 
+            case 14 -> "\u251C"; // ├ 
+            case 15 -> "\u253C"; // ┼ 
+            default -> "?";
+        };
+        return c + s + RESET;
+    }
 }
-
-
-
-
-
-
-
-
 
 JEU : 
 
-
-
 package netwalk;
 
-
-
-import java.util.ArrayList;
-
-import java.util.Collections;
-
-import java.util.List;
-
-import java.util.Random;
-
+import java.util.*;
 import netwalk.Tuile.Type;
 
-
-
 public class Jeu {
+    private Tuile[][] grille;
+    private int lignes, colonnes, nombreDeCoups = 0;
+    private long seed;
+    private Random random;
+
+    public Jeu(int lignes, int colonnes, long seed) {
+        this.lignes = lignes;
+        this.colonnes = colonnes;
+        this.seed = seed;
+        this.random = new Random(seed);
+        this.grille = new Tuile[lignes][colonnes];
+        genererNiveau(); 
+        melangerTuiles();
+    }
+
+    private void genererNiveau() {
+        for (int i = 0; i < lignes; i++)
+            for (int j = 0; j < colonnes; j++)
+                grille[i][j] = new Tuile(0, Type.TUYAU, false);
+        
+        boolean[][] visite = new boolean[lignes][colonnes];
+        creuserChemin(lignes/2, colonnes/2, visite);
+        definirTypesTuiles(lignes/2, colonnes/2);
+    }
+
+    private void creuserChemin(int x, int y, boolean[][] visite) {
+        visite[x][y] = true;
+        List<Integer> dirs = Arrays.asList(Tuile.NORD, Tuile.SUD, Tuile.EST, Tuile.OUEST);
+        Collections.shuffle(dirs, random);
+
+        for (int dir : dirs) {
+            int dx = (dir == Tuile.NORD) ? -1 : (dir == Tuile.SUD) ? 1 : 0;
+            int dy = (dir == Tuile.EST) ? 1 : (dir == Tuile.OUEST) ? -1 : 0;
+            int nx = x + dx, ny = y + dy;
+
+            if (nx >= 0 && nx < lignes && ny >= 0 && ny < colonnes && !visite[nx][ny]) {
+                grille[x][y].ajouterConnexion(dir);
+                grille[nx][ny].ajouterConnexion(oppose(dir));
+                creuserChemin(nx, ny, visite);
+            }
+        }
+    }
+
+    private void definirTypesTuiles(int sx, int sy) {
+        grille[sx][sy].setType(Type.SOURCE);
+        grille[sx][sy].setConnectee(true);
+        for (int i = 0; i < lignes; i++) {
+            for (int j = 0; j < colonnes; j++) {
+                if (Integer.bitCount(grille[i][j].getConnexions()) == 1 && grille[i][j].getType() != Type.SOURCE)
+                    grille[i][j].setType(Type.TERMINAL);
+            }
+        }
+    }
+
+    private void melangerTuiles() {
+        for (Tuile[] row : grille)
+            for (Tuile t : row) {
+                int r = random.nextInt(4);
+                for (int i = 0; i < r; i++) t.fairePivoter();
+            }
+        marquerConnexions();
+    }
+
+    public void faireTournerTuile(int x, int y) {
+        grille[x][y].fairePivoter();
+        nombreDeCoups++;
+        marquerConnexions();
+    }
+
+    public void marquerConnexions() {
+        for (Tuile[] row : grille)
+            for (Tuile t : row) if(t.getType() != Type.SOURCE) t.setConnectee(false);
+        propager(lignes/2, colonnes/2);
+    }
+
+    private void propager(int x, int y) {
+        int[] dx = {-1, 1, 0, 0}, dy = {0, 0, 1, -1};
+        for(int k=0; k<4; k++) {
+            int nx = x + dx[k], ny = y + dy[k];
+            if(nx >= 0 && nx < lignes && ny >= 0 && ny < colonnes && !grille[nx][ny].getEstConnectee()) {
+                if(verifierLien(x, y, nx, ny)) {
+                    grille[nx][ny].setConnectee(true);
+                    propager(nx, ny);
+                }
+            }
+        }
+    }
+
+    private boolean verifierLien(int x1, int y1, int x2, int y2) {
+        Tuile t1 = grille[x1][y1];
+        Tuile t2 = grille[x2][y2];
+        int dirT1VersT2 = 0;
+        if (x2 == x1 - 1) dirT1VersT2 = Tuile.NORD;
+        else if (x2 == x1 + 1) dirT1VersT2 = Tuile.SUD;
+        else if (y2 == y1 + 1) dirT1VersT2 = Tuile.EST;
+        else if (y2 == y1 - 1) dirT1VersT2 = Tuile.OUEST;
+        if (dirT1VersT2 == 0) return false;
+        int dirT2VersT1 = oppose(dirT1VersT2);
+        return t1.aConnexion(dirT1VersT2) && t2.aConnexion(dirT2VersT1);
+    }
+
+    private int oppose(int d) { return (d==8)?2:(d==2)?8:(d==4)?1:4; }
 
+    public boolean partieTerminee() {
+        for(Tuile[] r : grille) for(Tuile t : r) if(t.getType()==Type.TERMINAL && !t.getEstConnectee()) return false;
+        return true;
+    }
 
-
-&nbsp;   private Tuile\[]\[] grille;
-
-&nbsp;   private int lignes;
-
-&nbsp;   private int colonnes;
-
-&nbsp;   private int nombreDeCoups = 0;
-
-&nbsp;   private Random random = new Random();
-
-
-
-&nbsp;   public Jeu(int lignes, int colonnes) {
-
-&nbsp;       this.lignes = lignes;
-
-&nbsp;       this.colonnes = colonnes;
-
-&nbsp;       this.grille = new Tuile\[lignes]\[colonnes];
-
-&nbsp;       
-
-&nbsp;       // 1. Générer un réseau parfait (Arbre couvrant)
-
-&nbsp;       genererNiveau(); 
-
-&nbsp;       
-
-&nbsp;       // 2. Mélanger les pièces
-
-&nbsp;       melangerTuiles();
-
-&nbsp;   }
-
-
-
-&nbsp;   private void genererNiveau() {
-
-&nbsp;       // Remplir de cases vides
-
-&nbsp;       for (int i = 0; i < lignes; i++) {
-
-&nbsp;           for (int j = 0; j < colonnes; j++) {
-
-&nbsp;               grille\[i]\[j] = new Tuile(0, Type.TUYAU, false);
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;       
-
-&nbsp;       // Creuser le labyrinthe depuis le centre
-
-&nbsp;       int startX = lignes / 2;
-
-&nbsp;       int startY = colonnes / 2;
-
-&nbsp;       boolean\[]\[] visite = new boolean\[lignes]\[colonnes];
-
-&nbsp;       creuserChemin(startX, startY, visite);
-
-&nbsp;       
-
-&nbsp;       // Définir Source et Terminaux
-
-&nbsp;       definirTypesTuiles(startX, startY);
-
-&nbsp;   }
-
-
-
-&nbsp;   private void creuserChemin(int x, int y, boolean\[]\[] visite) {
-
-&nbsp;       visite\[x]\[y] = true;
-
-&nbsp;       
-
-&nbsp;       // Directions aléatoires
-
-&nbsp;       List<Integer> dirs = new ArrayList<>();
-
-&nbsp;       dirs.add(Tuile.NORD); dirs.add(Tuile.SUD);
-
-&nbsp;       dirs.add(Tuile.EST);  dirs.add(Tuile.OUEST);
-
-&nbsp;       Collections.shuffle(dirs);
-
-
-
-&nbsp;       for (int dir : dirs) {
-
-&nbsp;           int dx = 0, dy = 0, oppose = 0;
-
-&nbsp;           if (dir == Tuile.NORD) { dx = -1; oppose = Tuile.SUD; }
-
-&nbsp;           if (dir == Tuile.SUD)  { dx = 1;  oppose = Tuile.NORD; }
-
-&nbsp;           if (dir == Tuile.EST)  { dy = 1;  oppose = Tuile.OUEST; }
-
-&nbsp;           if (dir == Tuile.OUEST){ dy = -1; oppose = Tuile.EST; }
-
-
-
-&nbsp;           int nx = x + dx, ny = y + dy;
-
-
-
-&nbsp;           if (nx >= 0 \&\& nx < lignes \&\& ny >= 0 \&\& ny < colonnes \&\& !visite\[nx]\[ny]) {
-
-&nbsp;               grille\[x]\[y].ajouterConnexion(dir);
-
-&nbsp;               grille\[nx]\[ny].ajouterConnexion(oppose);
-
-&nbsp;               creuserChemin(nx, ny, visite);
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;   }
-
-
-
-&nbsp;   private void definirTypesTuiles(int sx, int sy) {
-
-&nbsp;       // La case de départ est la SOURCE
-
-&nbsp;       grille\[sx]\[sy].setType(Type.SOURCE);
-
-&nbsp;       grille\[sx]\[sy].setConnectee(true);
-
-
-
-&nbsp;       // Les bouts de tuyaux (1 seule connexion) deviennent des TERMINAUX
-
-&nbsp;       for (int i = 0; i < lignes; i++) {
-
-&nbsp;           for (int j = 0; j < colonnes; j++) {
-
-&nbsp;               Tuile t = grille\[i]\[j];
-
-&nbsp;               // Compte les bits à 1 (astuce pour savoir le nombre de connexions)
-
-&nbsp;               int nb = Integer.bitCount(t.getConnexions());
-
-&nbsp;               if (nb == 1 \&\& t.getType() != Type.SOURCE) {
-
-&nbsp;                   t.setType(Type.TERMINAL);
-
-&nbsp;               }
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;   }
-
-
-
-&nbsp;   private void melangerTuiles() {
-
-&nbsp;       for (int i = 0; i < lignes; i++) {
-
-&nbsp;           for (int j = 0; j < colonnes; j++) {
-
-&nbsp;               int rots = random.nextInt(4);
-
-&nbsp;               for (int k = 0; k < rots; k++) grille\[i]\[j].fairePivoter();
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;       marquerConnexions();
-
-&nbsp;   }
-
-
-
-&nbsp;   public void faireTournerTuile(int x, int y) {
-
-&nbsp;       if (x >= 0 \&\& x < lignes \&\& y >= 0 \&\& y < colonnes) {
-
-&nbsp;           grille\[x]\[y].fairePivoter();
-
-&nbsp;           nombreDeCoups++;
-
-&nbsp;           marquerConnexions();
-
-&nbsp;       }
-
-&nbsp;   }
-
-
-
-&nbsp;   public void marquerConnexions() {
-
-&nbsp;       // Reset sauf source
-
-&nbsp;       for (int i = 0; i < lignes; i++) {
-
-&nbsp;           for (int j = 0; j < colonnes; j++) {
-
-&nbsp;               if(grille\[i]\[j].getType() != Type.SOURCE) grille\[i]\[j].setConnectee(false);
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;       // Propagation
-
-&nbsp;       for (int i = 0; i < lignes; i++) {
-
-&nbsp;           for (int j = 0; j < colonnes; j++) {
-
-&nbsp;               if (grille\[i]\[j].getType() == Type.SOURCE) explorer(i, j);
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;   }
-
-
-
-&nbsp;   private void explorer(int x, int y) {
-
-&nbsp;       if (!grille\[x]\[y].getEstConnectee()) return; // Sécurité
-
-
-
-&nbsp;       int\[] dirs = {Tuile.NORD, Tuile.SUD, Tuile.EST, Tuile.OUEST};
-
-&nbsp;       int\[] dx = {-1, 1, 0, 0};
-
-&nbsp;       int\[] dy = {0, 0, 1, -1};
-
-
-
-&nbsp;       for(int k=0; k<4; k++) {
-
-&nbsp;           int nx = x + dx\[k];
-
-&nbsp;           int ny = y + dy\[k];
-
-&nbsp;           if(nx >= 0 \&\& nx < lignes \&\& ny >= 0 \&\& ny < colonnes) {
-
-&nbsp;               // Si lien valide et voisin pas encore allumé
-
-&nbsp;               if(verifierLien(x, y, nx, ny) \&\& !grille\[nx]\[ny].getEstConnectee()) {
-
-&nbsp;                   grille\[nx]\[ny].setConnectee(true);
-
-&nbsp;                   explorer(nx, ny);
-
-&nbsp;               }
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;   }
-
-
-
-&nbsp;   private boolean verifierLien(int x1, int y1, int x2, int y2) {
-
-&nbsp;       Tuile t1 = grille\[x1]\[y1];
-
-&nbsp;       Tuile t2 = grille\[x2]\[y2];
-
-&nbsp;       int dir = 0;
-
-&nbsp;       if (x2 == x1 - 1) dir = Tuile.NORD;
-
-&nbsp;       else if (x2 == x1 + 1) dir = Tuile.SUD;
-
-&nbsp;       else if (y2 == y1 + 1) dir = Tuile.EST;
-
-&nbsp;       else if (y2 == y1 - 1) dir = Tuile.OUEST;
-
-&nbsp;       
-
-&nbsp;       return t1.aConnexion(dir) \&\& t2.aConnexion(oppose(dir));
-
-&nbsp;   }
-
-
-
-&nbsp;   private int oppose(int dir) {
-
-&nbsp;       if (dir == Tuile.NORD) return Tuile.SUD;
-
-&nbsp;       if (dir == Tuile.SUD) return Tuile.NORD;
-
-&nbsp;       if (dir == Tuile.EST) return Tuile.OUEST;
-
-&nbsp;       return Tuile.EST;
-
-&nbsp;   }
-
-
-
-&nbsp;   public boolean partieTerminee() {
-
-&nbsp;       for (int i = 0; i < lignes; i++) {
-
-&nbsp;           for (int j = 0; j < colonnes; j++) {
-
-&nbsp;               if (grille\[i]\[j].getType() == Type.TERMINAL \&\& !grille\[i]\[j].getEstConnectee()) return false;
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;       return true;
-
-&nbsp;   }
-
-
-
-&nbsp;   public Tuile\[]\[] getGrille() { return grille; }
-
-&nbsp;   public int getLignes() { return lignes; }
-
-&nbsp;   public int getColonnes() { return colonnes; }
-
-&nbsp;   public int getNombreDeCoups() { return nombreDeCoups; }
-
+    public Tuile[][] getGrille() { return grille; }
+    public int getLignes() { return lignes; }
+    public int getColonnes() { return colonnes; }
+    public int getNombreDeCoups() { return nombreDeCoups; }
 }
 
 
 
+TESTNETWALK : 
 
+package netwalk;
 
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 
+public class TestNEtwalk {
 
+    public static void main(String[] args) {
+        // 1. FORCE L'UTF-8
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8.name()));
+        } catch (Exception e) {}
 
+        // 2. Initialisation
+        Jeu jeu = new Jeu(4, 6, System.currentTimeMillis()); 
+        Scanner scanner = new Scanner(System.in);
+        boolean jouer = true;
+        
+        // --- CHRONOMÈTRE : On note l'heure de début ---
+        long tempsDebut = System.currentTimeMillis();
+
+        while (jouer) {
+            // "Nettoyage" console
+            System.out.println("\n\n\n\n\n");
+            
+            // On passe le temps écoulé à la fonction d'affichage
+            long tempsEcouleMillis = System.currentTimeMillis() - tempsDebut;
+            afficherJeu(jeu, tempsEcouleMillis);
+
+            if (jeu.partieTerminee()) {
+                long secondesTotal = (System.currentTimeMillis() - tempsDebut) / 1000;
+                System.out.println("\nVICTOIRE !");
+                System.out.println("Coups : " + jeu.getNombreDeCoups());
+                System.out.println("Temps : " + secondesTotal + " secondes.");
+                break;
+            }
+
+            System.out.print("Commande (i,j,d pour droite / q pour quitter) : ");
+            
+            if (scanner.hasNextLine()) {
+                String cmd = scanner.nextLine().trim();
+                if (cmd.equalsIgnoreCase("q")) {
+                    jouer = false;
+                    System.out.println("Abandon.");
+                } else {
+                    try {
+                        String[] parts = cmd.split(",");
+                        // Accepte aussi juste "i,j" (tourne à droite par défaut) ou "i,j,d"
+                        int r = Integer.parseInt(parts[0].trim());
+                        int c = Integer.parseInt(parts[1].trim());
+                        
+                        // Si l'utilisateur tape juste "0,0", on tourne
+                        jeu.faireTournerTuile(r, c);
+                        
+                    } catch(Exception e) {
+                        // On ignore les mauvaises saisies pour ne pas planter
+                    }
+                }
+            }
+        }
+        scanner.close();
+    }
 
 
 
 INTERFACE GRAPHIQUE : 
 
-
-
-
-
 package netwalk;
 
-
-
-import java.awt.\*;
-
-import javax.swing.\*;
-
-
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Line2D;
+import javax.swing.*;
 
 public class InterfaceGraphique extends JFrame {
-
-
-
-&nbsp;   private Jeu jeu;
-
-&nbsp;   private JButton\[]\[] boutons;
-
-&nbsp;   private JLabel labelInfo;
-
-&nbsp;   private JPanel panneauPrincipal;
-
-&nbsp;   
-
-&nbsp;   // Sauvegarde des paramètres actuels pour le bouton "Recommencer"
-
-&nbsp;   private int tailleActuelle = 5; 
-
-
-
-&nbsp;   public InterfaceGraphique() {
-
-&nbsp;       this.setTitle("NetWalk - Projet Info");
-
-&nbsp;       this.setDefaultCloseOperation(JFrame.EXIT\_ON\_CLOSE);
-
-&nbsp;       this.setSize(900, 700);
-
-&nbsp;       
-
-&nbsp;       // On démarre sur le Menu de sélection
-
-&nbsp;       afficherMenu();
-
-&nbsp;       
-
-&nbsp;       this.setVisible(true);
-
-&nbsp;   }
-
-
-
-&nbsp;   /\*\*
-
-&nbsp;    \* Affiche l'écran de sélection de difficulté.
-
-&nbsp;    \*/
-
-&nbsp;   private void afficherMenu() {
-
-&nbsp;       // Nettoyage de la fenêtre
-
-&nbsp;       this.getContentPane().removeAll();
-
-&nbsp;       this.setLayout(new GridBagLayout()); // Centrage des éléments
-
-&nbsp;       
-
-&nbsp;       JPanel menuPanel = new JPanel();
-
-&nbsp;       menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y\_AXIS));
-
-&nbsp;       menuPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-
-
-&nbsp;       JLabel titre = new JLabel("Bienvenue dans NetWalk");
-
-&nbsp;       titre.setFont(new Font("Arial", Font.BOLD, 30));
-
-&nbsp;       titre.setAlignmentX(Component.CENTER\_ALIGNMENT);
-
-&nbsp;       
-
-&nbsp;       JLabel sousTitre = new JLabel("Choisissez votre niveau :");
-
-&nbsp;       sousTitre.setFont(new Font("Arial", Font.PLAIN, 18));
-
-&nbsp;       sousTitre.setAlignmentX(Component.CENTER\_ALIGNMENT);
-
-
-
-&nbsp;       // Boutons de niveaux
-
-&nbsp;       JButton btnDebutant = creerBoutonNiveau("Débutant (5x5)", 5);
-
-&nbsp;       JButton btnInter = creerBoutonNiveau("Intermédiaire (10x10)", 10);
-
-&nbsp;       JButton btnExpert = creerBoutonNiveau("Expert (15x15)", 15); // 20x20 peut être très petit sur l'écran
-
-
-
-&nbsp;       menuPanel.add(titre);
-
-&nbsp;       menuPanel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-&nbsp;       menuPanel.add(sousTitre);
-
-&nbsp;       menuPanel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-&nbsp;       menuPanel.add(btnDebutant);
-
-&nbsp;       menuPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-&nbsp;       menuPanel.add(btnInter);
-
-&nbsp;       menuPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-&nbsp;       menuPanel.add(btnExpert);
-
-
-
-&nbsp;       this.add(menuPanel);
-
-&nbsp;       this.revalidate();
-
-&nbsp;       this.repaint();
-
-&nbsp;   }
-
-
-
-&nbsp;   private JButton creerBoutonNiveau(String texte, int taille) {
-
-&nbsp;       JButton btn = new JButton(texte);
-
-&nbsp;       btn.setFont(new Font("Arial", Font.BOLD, 16));
-
-&nbsp;       btn.setAlignmentX(Component.CENTER\_ALIGNMENT);
-
-&nbsp;       btn.addActionListener(e -> lancerPartie(taille));
-
-&nbsp;       return btn;
-
-&nbsp;   }
-
-
-
-&nbsp;   /\*\*
-
-&nbsp;    \* Lance une nouvelle partie avec la taille donnée.
-
-&nbsp;    \*/
-
-&nbsp;   private void lancerPartie(int taille) {
-
-&nbsp;       this.tailleActuelle = taille;
-
-&nbsp;       this.jeu = new Jeu(taille, taille); // Génération du niveau parfait + mélange
-
-&nbsp;       
-
-&nbsp;       // Nettoyage de la fenêtre pour afficher le jeu
-
-&nbsp;       this.getContentPane().removeAll();
-
-&nbsp;       this.setLayout(new BorderLayout());
-
-
-
-&nbsp;       // 1. HEADER (Haut) : Score et bouton Retour Menu
-
-&nbsp;       JPanel headerPanel = new JPanel(new BorderLayout());
-
-&nbsp;       
-
-&nbsp;       JButton btnMenu = new JButton("Menu");
-
-&nbsp;       btnMenu.addActionListener(e -> afficherMenu());
-
-&nbsp;       
-
-&nbsp;       labelInfo = new JLabel("Coups : 0");
-
-&nbsp;       labelInfo.setFont(new Font("SansSerif", Font.BOLD, 20));
-
-&nbsp;       labelInfo.setHorizontalAlignment(SwingConstants.CENTER);
-
-&nbsp;       
-
-&nbsp;       headerPanel.add(btnMenu, BorderLayout.WEST);
-
-&nbsp;       headerPanel.add(labelInfo, BorderLayout.CENTER);
-
-&nbsp;       this.add(headerPanel, BorderLayout.NORTH);
-
-
-
-&nbsp;       // 2. GRILLE (Centre)
-
-&nbsp;       panneauPrincipal = new JPanel();
-
-&nbsp;       panneauPrincipal.setLayout(new GridLayout(taille, taille));
-
-&nbsp;       
-
-&nbsp;       boutons = new JButton\[taille]\[taille];
-
-&nbsp;       
-
-&nbsp;       // Calcul de la taille de police dynamique selon la taille de la grille
-
-&nbsp;       int fontSize = (taille > 10) ? 20 : 40; 
-
-&nbsp;       Font fontTuile = new Font("Monospaced", Font.BOLD, fontSize);
-
-
-
-&nbsp;       for (int i = 0; i < taille; i++) {
-
-&nbsp;           for (int j = 0; j < taille; j++) {
-
-&nbsp;               JButton btn = new JButton();
-
-&nbsp;               btn.setFont(fontTuile);
-
-&nbsp;               btn.setFocusPainted(false);
-
-&nbsp;               
-
-&nbsp;               final int r = i;
-
-&nbsp;               final int c = j;
-
-&nbsp;               btn.addActionListener(e -> jouerCoup(r, c));
-
-
-
-&nbsp;               boutons\[i]\[j] = btn;
-
-&nbsp;               panneauPrincipal.add(btn);
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;       this.add(panneauPrincipal, BorderLayout.CENTER);
-
-
-
-&nbsp;       // 3. FOOTER (Bas) : Légende et Reset
-
-&nbsp;       JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
-
-&nbsp;       footerPanel.setBackground(Color.LIGHT\_GRAY);
-
-
-
-&nbsp;       // Bouton Reset
-
-&nbsp;       JButton btnReset = new JButton("Recommencer ce niveau");
-
-&nbsp;       btnReset.addActionListener(e -> lancerPartie(tailleActuelle)); // Relance le même niveau (nouvelle génération)
-
-&nbsp;       
-
-&nbsp;       // Légende
-
-&nbsp;       footerPanel.add(creerLabelLegende("Source", Color.ORANGE));
-
-&nbsp;       footerPanel.add(creerLabelLegende("Connecté", Color.CYAN));
-
-&nbsp;       footerPanel.add(creerLabelLegende("Déconnecté", Color.LIGHT\_GRAY));
-
-&nbsp;       footerPanel.add(creerLabelLegende("Terminal (OFF)", Color.PINK));
-
-&nbsp;       footerPanel.add(creerLabelLegende("Terminal (ON)", Color.GREEN));
-
-&nbsp;       footerPanel.add(btnReset);
-
-
-
-&nbsp;       this.add(footerPanel, BorderLayout.SOUTH);
-
-
-
-&nbsp;       rafraichirVue();
-
-&nbsp;       this.revalidate();
-
-&nbsp;       this.repaint();
-
-&nbsp;   }
-
-
-
-&nbsp;   private JLabel creerLabelLegende(String texte, Color couleur) {
-
-&nbsp;       JLabel lbl = new JLabel("  " + texte + "  ");
-
-&nbsp;       lbl.setOpaque(true);
-
-&nbsp;       lbl.setBackground(couleur);
-
-&nbsp;       lbl.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-
-&nbsp;       return lbl;
-
-&nbsp;   }
-
-
-
-&nbsp;   private void jouerCoup(int r, int c) {
-
-&nbsp;       jeu.faireTournerTuile(r, c);
-
-&nbsp;       rafraichirVue();
-
-&nbsp;       
-
-&nbsp;       if (jeu.partieTerminee()) {
-
-&nbsp;           labelInfo.setText("VICTOIRE ! (" + jeu.getNombreDeCoups() + " coups)");
-
-&nbsp;           labelInfo.setForeground(new Color(0, 128, 0));
-
-&nbsp;           int choix = JOptionPane.showConfirmDialog(this, 
-
-&nbsp;               "Félicitations ! Vous avez rétabli le réseau !\\nVoulez-vous rejouer ?", 
-
-&nbsp;               "Victoire", JOptionPane.YES\_NO\_OPTION);
-
-&nbsp;               
-
-&nbsp;           if (choix == JOptionPane.YES\_OPTION) {
-
-&nbsp;               afficherMenu();
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;   }
-
-
-
-&nbsp;   private void rafraichirVue() {
-
-&nbsp;       labelInfo.setText("Coups : " + jeu.getNombreDeCoups());
-
-&nbsp;       Tuile\[]\[] grille = jeu.getGrille();
-
-
-
-&nbsp;       for (int i = 0; i < jeu.getLignes(); i++) {
-
-&nbsp;           for (int j = 0; j < jeu.getColonnes(); j++) {
-
-&nbsp;               Tuile t = grille\[i]\[j];
-
-&nbsp;               JButton btn = boutons\[i]\[j];
-
-
-
-&nbsp;               btn.setText(t.toString());
-
-
-
-&nbsp;               if (t.getType() == Tuile.Type.SOURCE) {
-
-&nbsp;                   btn.setBackground(Color.ORANGE);
-
-&nbsp;               } else if (t.getType() == Tuile.Type.TERMINAL) {
-
-&nbsp;                   btn.setBackground(t.getEstConnectee() ? Color.GREEN : Color.PINK);
-
-&nbsp;               } else {
-
-&nbsp;                   btn.setBackground(t.getEstConnectee() ? Color.CYAN : Color.LIGHT\_GRAY);
-
-&nbsp;               }
-
-&nbsp;           }
-
-&nbsp;       }
-
-&nbsp;   }
-
-&nbsp;   
-
-&nbsp;   public static void main(String\[] args) {
-
-&nbsp;       // Lancement via le thread graphique (EDT) pour éviter les bugs d'affichage
-
-&nbsp;       SwingUtilities.invokeLater(() -> new InterfaceGraphique());
-
-&nbsp;   }
-
+    private Jeu jeu;
+    private JPanel grillePanel;
+    private JLabel labelTemps;
+    private JLabel labelCoups;
+    private Timer timer;
+    private long tempsDebut;
+    private boolean partieFinie = false;
+
+    // Configuration des couleurs (Style "Dark Mode" ou "Retro")
+    private final Color COLOR_BG = new Color(40, 40, 40);       // Gris foncé
+    private final Color COLOR_PIPE_OFF = new Color(100, 100, 100); // Gris (éteint)
+    private final Color COLOR_PIPE_ON = new Color(0, 200, 255);    // Cyan (allumé)
+    private final Color COLOR_SOURCE = new Color(255, 69, 0);      // Orange/Rouge
+    private final Color COLOR_TERMINAL_OFF = new Color(128, 0, 128); // Violet
+    private final Color COLOR_TERMINAL_ON = new Color(50, 205, 50);  // Vert
+
+    public InterfaceGraphique() {
+        setTitle("NetWalk - Projet Java");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        setLocationRelativeTo(null); // Centrer la fenêtre
+        setLayout(new BorderLayout());
+
+        // 1. Initialisation du jeu
+        lancerNouveauJeu();
+
+        // 2. Panneau du Haut (Infos)
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 10));
+        topPanel.setBackground(new Color(30, 30, 30));
+        
+        labelCoups = new JLabel("Coups: 0");
+        labelCoups.setForeground(Color.WHITE);
+        labelCoups.setFont(new Font("Arial", Font.BOLD, 18));
+        
+        labelTemps = new JLabel("Temps: 00:00");
+        labelTemps.setForeground(Color.WHITE);
+        labelTemps.setFont(new Font("Monospaced", Font.BOLD, 18));
+
+        topPanel.add(labelCoups);
+        topPanel.add(labelTemps);
+        add(topPanel, BorderLayout.NORTH);
+
+        // 3. Panneau Central (Grille de Jeu)
+        grillePanel = new JPanel();
+        grillePanel.setBackground(COLOR_BG);
+        add(grillePanel, BorderLayout.CENTER);
+
+        // 4. Panneau du Bas (Boutons)
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setBackground(new Color(30, 30, 30));
+        
+        JButton btnRestart = new JButton("Recommencer");
+        btnRestart.setFocusable(false);
+        btnRestart.addActionListener(e -> lancerNouveauJeu());
+        
+        bottomPanel.add(btnRestart);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        // 5. Timer pour le chronomètre (1 seconde)
+        timer = new Timer(1000, e -> mettreAJourChrono());
+        timer.start();
+
+        // Premier dessin
+        dessinerGrille();
+        setVisible(true);
+    }
+
+    private void lancerNouveauJeu() {
+        // Création d'un jeu 5x7 (ou autre taille)
+        this.jeu = new Jeu(5, 7, System.currentTimeMillis());
+        this.tempsDebut = System.currentTimeMillis();
+        this.partieFinie = false;
+        
+        if (timer != null) timer.restart();
+        if (labelCoups != null) labelCoups.setText("Coups: 0");
+        
+        dessinerGrille();
+    }
+
+    private void mettreAJourChrono() {
+        if (partieFinie) return;
+        long millis = System.currentTimeMillis() - tempsDebut;
+        long secondes = millis / 1000;
+        long min = secondes / 60;
+        long sec = secondes % 60;
+        labelTemps.setText(String.format("Temps: %02d:%02d", min, sec));
+    }
+
+    // --- CŒUR DU DESSIN ---
+    private void dessinerGrille() {
+        if (grillePanel == null) return;
+        
+        grillePanel.removeAll();
+        int rows = jeu.getLignes();
+        int cols = jeu.getColonnes();
+        grillePanel.setLayout(new GridLayout(rows, cols));
+
+        Tuile[][] grille = jeu.getGrille();
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                final int r = i;
+                final int c = j;
+                
+                // On crée un composant personnalisé pour chaque tuile
+                PanneauTuile pTuile = new PanneauTuile(grille[i][j]);
+                
+                // GESTION DES CLICS SOURIS
+                pTuile.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        if (partieFinie) return;
+
+                        if (SwingUtilities.isRightMouseButton(e)) {
+                            // Clic Droit -> Rotation horaire (normale)
+                            jeu.faireTournerTuile(r, c);
+                        } else if (SwingUtilities.isLeftMouseButton(e)) {
+                            // Clic Gauche -> Rotation anti-horaire
+                            // (Astuce : 3 rotations à droite = 1 à gauche)
+                            jeu.faireTournerTuile(r, c);
+                            jeu.faireTournerTuile(r, c);
+                            jeu.faireTournerTuile(r, c); 
+                            // Note: Le compteur de coups augmentera de 3, 
+                            // si tu veux éviter ça, il faudrait une méthode "tournerGauche" dans Jeu.
+                        }
+                        
+                        verifierVictoire();
+                        labelCoups.setText("Coups: " + jeu.getNombreDeCoups());
+                        
+                        // On redessine tout (bourrin mais sûr pour les connexions)
+                        grillePanel.revalidate();
+                        grillePanel.repaint();
+                    }
+                });
+                
+                grillePanel.add(pTuile);
+            }
+        }
+        grillePanel.revalidate();
+        grillePanel.repaint();
+    }
+
+    private void verifierVictoire() {
+        if (jeu.partieTerminee()) {
+            partieFinie = true;
+            timer.stop();
+            grillePanel.repaint(); // Pour afficher les dernières couleurs
+            
+            long secondes = (System.currentTimeMillis() - tempsDebut) / 1000;
+            JOptionPane.showMessageDialog(this, 
+                "FÉLICITATIONS !\n\n" +
+                "Niveau terminé.\n" +
+                "Coups : " + jeu.getNombreDeCoups() + "\n" +
+                "Temps : " + secondes + "s",
+                "Victoire", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    // --- COMPOSANT VISUEL D'UNE TUILE ---
+    // C'est ici qu'on dessine les lignes, les carrés, etc.
+    private class PanneauTuile extends JPanel {
+        private Tuile tuile;
+
+        public PanneauTuile(Tuile t) {
+            this.tuile = t;
+            this.setBackground(COLOR_BG);
+            this.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60), 1)); // Légère bordure
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            
+            // Anti-aliasing pour que ce soit joli (moins pixelisé)
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int cx = w / 2;
+            int cy = h / 2;
+            
+            // Déterminer la couleur
+            Color couleurLigne = tuile.getEstConnectee() ? COLOR_PIPE_ON : COLOR_PIPE_OFF;
+            if (tuile.getType() == Tuile.Type.SOURCE) couleurLigne = COLOR_SOURCE;
+
+            // Épaisseur du tuyau
+            int epaisseur = Math.min(w, h) / 5; 
+            g2.setStroke(new BasicStroke(epaisseur, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND));
+            g2.setColor(couleurLigne);
+
+            // DESSIN DES CONNEXIONS (Tuyaux)
+            int code = tuile.getConnexions(); // Assure-toi que cette méthode existe dans Tuile (sinon getCode())
+            
+            // Nord (8)
+            if ((code & 8) != 0) g2.draw(new Line2D.Float(cx, cy, cx, 0));
+            // Sud (2)
+            if ((code & 2) != 0) g2.draw(new Line2D.Float(cx, cy, cx, h));
+            // Est (4)
+            if ((code & 4) != 0) g2.draw(new Line2D.Float(cx, cy, w, cy));
+            // Ouest (1)
+            if ((code & 1) != 0) g2.draw(new Line2D.Float(cx, cy, 0, cy));
+
+            // DESSIN DU CENTRE (Formes Spécifiques)
+            int tailleCentre = epaisseur * 2;
+            int xCentre = cx - tailleCentre / 2;
+            int yCentre = cy - tailleCentre / 2;
+
+            if (tuile.getType() == Tuile.Type.SOURCE) {
+                // Source : Un carré plein Orange/Rouge
+                g2.setColor(COLOR_SOURCE);
+                g2.fillRect(xCentre, yCentre, tailleCentre, tailleCentre);
+                // Petit contour blanc pour le style
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRect(xCentre, yCentre, tailleCentre, tailleCentre);
+
+            } else if (tuile.getType() == Tuile.Type.TERMINAL) {
+                // Terminal : Un carré avec contour, couleur change selon connexion
+                g2.setColor(tuile.getEstConnectee() ? COLOR_TERMINAL_ON : COLOR_TERMINAL_OFF);
+                g2.fillRect(xCentre, yCentre, tailleCentre, tailleCentre);
+                
+                // Dessin "Écran" (petit rectangle noir dedans)
+                g2.setColor(Color.BLACK);
+                g2.fillRect(xCentre + 4, yCentre + 4, tailleCentre - 8, tailleCentre - 8);
+            } else {
+                // Tuyau normal : un petit rond central pour lisser les jointures
+                g2.setColor(couleurLigne);
+                g2.fillOval(cx - epaisseur/2, cy - epaisseur/2, epaisseur, epaisseur);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        // Lancer l'interface dans le thread graphique
+        SwingUtilities.invokeLater(InterfaceGraphique::new);
+    }
 }
-

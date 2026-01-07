@@ -1,92 +1,103 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
- */
 package netwalk;
 
-/**
- *
- * @author gdarre
- */
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 
-/**
- * Classe de test pour vérifier le bon fonctionnement de la classe Jeu.
- * Elle teste l'initialisation, la rotation et la logique de connexion.
- * * @author gdarre
- */
 public class TestNEtwalk {
 
     public static void main(String[] args) {
-        System.out.println("=== DÉBUT DES TESTS DU JEU NETWALK ===\n");
+        // 1. FORCE L'UTF-8
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8.name()));
+        } catch (Exception e) {}
 
-        // --- TEST 1 : Initialisation du Jeu ---
-        System.out.println("[TEST 1] Initialisation du Plateau 3x3");
-        Jeu jeu = new Jeu(3, 3);
-        System.out.println("Plateau initial :");
-        System.out.println(jeu.toString());
-        System.out.println("Test 1 OK : Le plateau s'affiche correctement.\n");
+        // 2. Initialisation
+        Jeu jeu = new Jeu(4, 6, System.currentTimeMillis()); 
+        Scanner scanner = new Scanner(System.in);
+        boolean jouer = true;
+        
+        // --- CHRONOMÈTRE : On note l'heure de début ---
+        long tempsDebut = System.currentTimeMillis();
 
+        while (jouer) {
+            // "Nettoyage" console
+            System.out.println("\n\n\n\n\n");
+            
+            // On passe le temps écoulé à la fonction d'affichage
+            long tempsEcouleMillis = System.currentTimeMillis() - tempsDebut;
+            afficherJeu(jeu, tempsEcouleMillis);
 
-        // --- TEST 2 : Rotation d'une Tuile ---
-        System.out.println("[TEST 2] Rotation de la tuile (0,0)");
-        // La tuile (0,0) est initialement verticale (NORD | SUD = 10)
-        // Après 1 rotation (anti-horaire dans ton code 8-4-2-1), elle devrait changer.
-        // NORD(8) -> EST(4), SUD(2) -> OUEST(1). Donc 10 -> 5 (Horizontale)
-        
-        System.out.println("Avant rotation :");
-        // On affiche juste une partie pour vérifier visuellement ou on fait confiance au toString()
-        
-        jeu.faireTournerTuile(0, 0);
-        
-        System.out.println("Après rotation (0,0) :");
-        System.out.println(jeu.toString());
-        System.out.println("Test 2 OK : La tuile en (0,0) a changé d'orientation.\n");
+            if (jeu.partieTerminee()) {
+                long secondesTotal = (System.currentTimeMillis() - tempsDebut) / 1000;
+                System.out.println("\nVICTOIRE !");
+                System.out.println("Coups : " + jeu.getNombreDeCoups());
+                System.out.println("Temps : " + secondesTotal + " secondes.");
+                break;
+            }
 
+            System.out.print("Commande (i,j,d pour droite / q pour quitter) : ");
+            
+            if (scanner.hasNextLine()) {
+                String cmd = scanner.nextLine().trim();
+                if (cmd.equalsIgnoreCase("q")) {
+                    jouer = false;
+                    System.out.println("Abandon.");
+                } else {
+                    try {
+                        String[] parts = cmd.split(",");
+                        // Accepte aussi juste "i,j" (tourne à droite par défaut) ou "i,j,d"
+                        int r = Integer.parseInt(parts[0].trim());
+                        int c = Integer.parseInt(parts[1].trim());
+                        
+                        // Si l'utilisateur tape juste "0,0", on tourne
+                        jeu.faireTournerTuile(r, c);
+                        
+                    } catch(Exception e) {
+                        // On ignore les mauvaises saisies pour ne pas planter
+                    }
+                }
+            }
+        }
+        scanner.close();
+    }
 
-        // --- TEST 3 : Vérification de Lien (Simulation) ---
-        // Ce test est plus subtil car la méthode verifierLien est privée dans Jeu.
-        // On ne peut pas l'appeler directement ici.
-        // Cependant, on peut vérifier la conséquence : la logique de rotation a été testée plus haut.
-        
-        // Pour tester verifierLien, il faudrait soit :
-        // 1. Rendre la méthode 'verifierLien' public temporairement.
-        // 2. Ou tester la méthode 'marquerConnexions' (si implémentée) qui utilise verifierLien.
-        
-        System.out.println("[TEST 3] Simulation de Connexion");
-        // On va essayer de connecter la tuile (0,0) qui est maintenant horizontale (EST-OUEST)
-        // avec la tuile (0,1) qui est un coude NORD-EST.
-        // (0,0) a EST, (0,1) n'a pas OUEST. Donc pas de connexion.
-        
-        // On tourne (0,1) pour qu'elle ait une connexion OUEST.
-        // (0,1) est NORD(8)|EST(4). 
-        // Tour 1 -> EST(4)|SUD(2)
-        // Tour 2 -> SUD(2)|OUEST(1)  <-- Là elle aura OUEST !
-        
-        System.out.println("Rotation de (0,1) pour tenter une connexion...");
-        jeu.faireTournerTuile(0, 1);
-        jeu.faireTournerTuile(0, 1);
-        
-        System.out.println(jeu.toString());
-        
-        // Note : Comme 'estConnectee' n'est pas encore calculé dynamiquement par marquerConnexions
-        // dans ton code actuel (la méthode est vide), on ne verra pas de changement de couleur/état.
-        // Ce test valide surtout que les actions s'enchaînent sans erreur.
-        System.out.println("Test 3 OK : Les rotations s'enchaînent sans planter.\n");
+    private static void afficherJeu(Jeu jeu, long tempsMillis) {
+        Tuile[][] grille = jeu.getGrille();
+        int L = jeu.getLignes();
+        int C = jeu.getColonnes();
 
+        // Calcul du temps en mm:ss
+        long totalSecondes = tempsMillis / 1000;
+        long minutes = totalSecondes / 60;
+        long secondes = totalSecondes % 60;
+        String tempsFormatte = String.format("%02d:%02d", minutes, secondes);
 
-        // --- TEST 4 : Coordonnées Invalides ---
-        System.out.println("[TEST 4] Gestion des erreurs (Coordonnées hors limites)");
-        System.out.print("Tentative de tourner (-1, 0) : ");
-        jeu.faireTournerTuile(-1, 0); // Doit afficher un message d'erreur
+        // Indices Colonnes
+        System.out.print("    ");
+        for(int j=0; j<C; j++) System.out.print(" " + j + " ");
+        System.out.println();
+
+        // Bordure Haut
+        System.out.print("    \u250C");
+        for(int j=0; j<C; j++) System.out.print("\u2500\u2500\u2500");
+        System.out.println("\u2510");
+
+        // Contenu Grille
+        for(int i=0; i<L; i++) {
+            System.out.print(" " + i + "  \u2502");
+            for(int j=0; j<C; j++) {
+                System.out.print(" " + grille[i][j] + " ");
+            }
+            System.out.println("\u2502  " + i);
+        }
+
+        // Bordure Bas
+        System.out.print("    \u2514");
+        for(int j=0; j<C; j++) System.out.print("\u2500\u2500\u2500");
+        System.out.println("\u2518");
         
-        System.out.print("Tentative de tourner (0, 5) : ");
-        jeu.faireTournerTuile(0, 5); // Doit afficher un message d'erreur
-        System.out.println("Test 4 OK : Les erreurs sont gérées.\n");
-
-        System.out.println("=== FIN DES TESTS ===");
+        // --- AFFICHAGE INFOS (Coups + Chrono) ---
+        System.out.println("    Coups: " + jeu.getNombreDeCoups() + "   |   Chrono: " + tempsFormatte);
     }
 }

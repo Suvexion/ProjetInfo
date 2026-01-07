@@ -1,141 +1,92 @@
 package netwalk;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import netwalk.Tuile.Type;
 
 public class Jeu {
-
     private Tuile[][] grille;
-    private int lignes;
-    private int colonnes;
-    private int nombreDeCoups = 0;
-    private Random random = new Random();
+    private int lignes, colonnes, nombreDeCoups = 0;
+    private long seed;
+    private Random random;
 
-    public Jeu(int lignes, int colonnes) {
+    public Jeu(int lignes, int colonnes, long seed) {
         this.lignes = lignes;
         this.colonnes = colonnes;
+        this.seed = seed;
+        this.random = new Random(seed);
         this.grille = new Tuile[lignes][colonnes];
-        
-        // 1. Générer un réseau parfait (Arbre couvrant)
         genererNiveau(); 
-        
-        // 2. Mélanger les pièces
         melangerTuiles();
     }
 
     private void genererNiveau() {
-        // Remplir de cases vides
-        for (int i = 0; i < lignes; i++) {
-            for (int j = 0; j < colonnes; j++) {
+        for (int i = 0; i < lignes; i++)
+            for (int j = 0; j < colonnes; j++)
                 grille[i][j] = new Tuile(0, Type.TUYAU, false);
-            }
-        }
         
-        // Creuser le labyrinthe depuis le centre
-        int startX = lignes / 2;
-        int startY = colonnes / 2;
         boolean[][] visite = new boolean[lignes][colonnes];
-        creuserChemin(startX, startY, visite);
-        
-        // Définir Source et Terminaux
-        definirTypesTuiles(startX, startY);
+        creuserChemin(lignes/2, colonnes/2, visite);
+        definirTypesTuiles(lignes/2, colonnes/2);
     }
 
     private void creuserChemin(int x, int y, boolean[][] visite) {
         visite[x][y] = true;
-        
-        // Directions aléatoires
-        List<Integer> dirs = new ArrayList<>();
-        dirs.add(Tuile.NORD); dirs.add(Tuile.SUD);
-        dirs.add(Tuile.EST);  dirs.add(Tuile.OUEST);
-        Collections.shuffle(dirs);
+        List<Integer> dirs = Arrays.asList(Tuile.NORD, Tuile.SUD, Tuile.EST, Tuile.OUEST);
+        Collections.shuffle(dirs, random);
 
         for (int dir : dirs) {
-            int dx = 0, dy = 0, oppose = 0;
-            if (dir == Tuile.NORD) { dx = -1; oppose = Tuile.SUD; }
-            if (dir == Tuile.SUD)  { dx = 1;  oppose = Tuile.NORD; }
-            if (dir == Tuile.EST)  { dy = 1;  oppose = Tuile.OUEST; }
-            if (dir == Tuile.OUEST){ dy = -1; oppose = Tuile.EST; }
-
+            int dx = (dir == Tuile.NORD) ? -1 : (dir == Tuile.SUD) ? 1 : 0;
+            int dy = (dir == Tuile.EST) ? 1 : (dir == Tuile.OUEST) ? -1 : 0;
             int nx = x + dx, ny = y + dy;
 
             if (nx >= 0 && nx < lignes && ny >= 0 && ny < colonnes && !visite[nx][ny]) {
                 grille[x][y].ajouterConnexion(dir);
-                grille[nx][ny].ajouterConnexion(oppose);
+                grille[nx][ny].ajouterConnexion(oppose(dir));
                 creuserChemin(nx, ny, visite);
             }
         }
     }
 
     private void definirTypesTuiles(int sx, int sy) {
-        // La case de départ est la SOURCE
         grille[sx][sy].setType(Type.SOURCE);
         grille[sx][sy].setConnectee(true);
-
-        // Les bouts de tuyaux (1 seule connexion) deviennent des TERMINAUX
         for (int i = 0; i < lignes; i++) {
             for (int j = 0; j < colonnes; j++) {
-                Tuile t = grille[i][j];
-                // Compte les bits à 1 (astuce pour savoir le nombre de connexions)
-                int nb = Integer.bitCount(t.getConnexions());
-                if (nb == 1 && t.getType() != Type.SOURCE) {
-                    t.setType(Type.TERMINAL);
-                }
+                if (Integer.bitCount(grille[i][j].getConnexions()) == 1 && grille[i][j].getType() != Type.SOURCE)
+                    grille[i][j].setType(Type.TERMINAL);
             }
         }
     }
 
     private void melangerTuiles() {
-        for (int i = 0; i < lignes; i++) {
-            for (int j = 0; j < colonnes; j++) {
-                int rots = random.nextInt(4);
-                for (int k = 0; k < rots; k++) grille[i][j].fairePivoter();
+        for (Tuile[] row : grille)
+            for (Tuile t : row) {
+                int r = random.nextInt(4);
+                for (int i = 0; i < r; i++) t.fairePivoter();
             }
-        }
         marquerConnexions();
     }
 
     public void faireTournerTuile(int x, int y) {
-        if (x >= 0 && x < lignes && y >= 0 && y < colonnes) {
-            grille[x][y].fairePivoter();
-            nombreDeCoups++;
-            marquerConnexions();
-        }
+        grille[x][y].fairePivoter();
+        nombreDeCoups++;
+        marquerConnexions();
     }
 
     public void marquerConnexions() {
-        // Reset sauf source
-        for (int i = 0; i < lignes; i++) {
-            for (int j = 0; j < colonnes; j++) {
-                if(grille[i][j].getType() != Type.SOURCE) grille[i][j].setConnectee(false);
-            }
-        }
-        // Propagation
-        for (int i = 0; i < lignes; i++) {
-            for (int j = 0; j < colonnes; j++) {
-                if (grille[i][j].getType() == Type.SOURCE) explorer(i, j);
-            }
-        }
+        for (Tuile[] row : grille)
+            for (Tuile t : row) if(t.getType() != Type.SOURCE) t.setConnectee(false);
+        propager(lignes/2, colonnes/2);
     }
 
-    private void explorer(int x, int y) {
-        if (!grille[x][y].getEstConnectee()) return; // Sécurité
-
-        int[] dirs = {Tuile.NORD, Tuile.SUD, Tuile.EST, Tuile.OUEST};
-        int[] dx = {-1, 1, 0, 0};
-        int[] dy = {0, 0, 1, -1};
-
+    private void propager(int x, int y) {
+        int[] dx = {-1, 1, 0, 0}, dy = {0, 0, 1, -1};
         for(int k=0; k<4; k++) {
-            int nx = x + dx[k];
-            int ny = y + dy[k];
-            if(nx >= 0 && nx < lignes && ny >= 0 && ny < colonnes) {
-                // Si lien valide et voisin pas encore allumé
-                if(verifierLien(x, y, nx, ny) && !grille[nx][ny].getEstConnectee()) {
+            int nx = x + dx[k], ny = y + dy[k];
+            if(nx >= 0 && nx < lignes && ny >= 0 && ny < colonnes && !grille[nx][ny].getEstConnectee()) {
+                if(verifierLien(x, y, nx, ny)) {
                     grille[nx][ny].setConnectee(true);
-                    explorer(nx, ny);
+                    propager(nx, ny);
                 }
             }
         }
@@ -144,28 +95,20 @@ public class Jeu {
     private boolean verifierLien(int x1, int y1, int x2, int y2) {
         Tuile t1 = grille[x1][y1];
         Tuile t2 = grille[x2][y2];
-        int dir = 0;
-        if (x2 == x1 - 1) dir = Tuile.NORD;
-        else if (x2 == x1 + 1) dir = Tuile.SUD;
-        else if (y2 == y1 + 1) dir = Tuile.EST;
-        else if (y2 == y1 - 1) dir = Tuile.OUEST;
-        
-        return t1.aConnexion(dir) && t2.aConnexion(oppose(dir));
+        int dirT1VersT2 = 0;
+        if (x2 == x1 - 1) dirT1VersT2 = Tuile.NORD;
+        else if (x2 == x1 + 1) dirT1VersT2 = Tuile.SUD;
+        else if (y2 == y1 + 1) dirT1VersT2 = Tuile.EST;
+        else if (y2 == y1 - 1) dirT1VersT2 = Tuile.OUEST;
+        if (dirT1VersT2 == 0) return false;
+        int dirT2VersT1 = oppose(dirT1VersT2);
+        return t1.aConnexion(dirT1VersT2) && t2.aConnexion(dirT2VersT1);
     }
 
-    private int oppose(int dir) {
-        if (dir == Tuile.NORD) return Tuile.SUD;
-        if (dir == Tuile.SUD) return Tuile.NORD;
-        if (dir == Tuile.EST) return Tuile.OUEST;
-        return Tuile.EST;
-    }
+    private int oppose(int d) { return (d==8)?2:(d==2)?8:(d==4)?1:4; }
 
     public boolean partieTerminee() {
-        for (int i = 0; i < lignes; i++) {
-            for (int j = 0; j < colonnes; j++) {
-                if (grille[i][j].getType() == Type.TERMINAL && !grille[i][j].getEstConnectee()) return false;
-            }
-        }
+        for(Tuile[] r : grille) for(Tuile t : r) if(t.getType()==Type.TERMINAL && !t.getEstConnectee()) return false;
         return true;
     }
 
